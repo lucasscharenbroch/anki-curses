@@ -34,6 +34,7 @@ class MainMenu(KeyHandler):
         curses.noecho() # don't echo user input
         init_style()
         self.redraw_scr(self.head_str, self.foot_str)
+        curses.curs_set(0) # make cursor invisible
 
     def init_config_data(self) -> None:
         self.conf_data = None
