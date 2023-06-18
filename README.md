@@ -1,11 +1,14 @@
-# Anki
+# Anki-Curses
 
-[![Build status](https://badge.buildkite.com/c9edf020a4aec976f9835e54751cc5409d843adbb66d043bd3.svg?branch=main)](https://buildkite.com/ankitects/anki-ci)
+A fork of [Anki](https://github.com/ankitects/anki) with a curses frontend.
 
-This repo contains the source code for the computer version of
-[Anki](https://apps.ankiweb.net).
+<image src="screenshot.png">
 
-If you'd like to try development builds of Anki but don't feel comfortable
-building the code, please see https://betas.ankiweb.net/
+The curses interface is not currently capable of being a complete replacement for the GUI (qt), but its features (see below) aim to cover most typical studying requirements.
 
-For more information on building, please see [Development](./docs/development.md).
+## Features
+- Basic Deck Browsing
+- Support for Basic Cards and Cloze Cards (Cloze deletion)
+- Note Editing (directly from reviewer)
+- Sync
+- Configuration File
