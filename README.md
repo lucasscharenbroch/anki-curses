@@ -1,6 +1,6 @@
 # Anki-Curses
 
-A fork of [Anki](https://github.com/ankitects/anki) with a curses frontend.
+A fork of [Anki](https://github.com/ankitects/anki) with a curses front-end.
 
 <image src="screenshot.png">
 
