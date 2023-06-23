@@ -94,13 +94,16 @@ class NoteParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.parsed_text = ""
+        self.seen_div = False
 
     def handle_starttag(self, tag: str, attrs: list[str]) -> None:
-        if tag == "div":
+        if tag == "div" and not self.seen_div:
+            self.seen_div = True
             self.parsed_text += "\n"
 
     def handle_endtag(self, tag: str) -> None:
-        pass
+        if tag == "div":
+            self.parsed_text += "\n"
 
     def handle_data(self, data: str) -> None:
         self.parsed_text += data
@@ -118,9 +121,13 @@ class NoteParser(HTMLParser):
 
         result = ""
 
-        for i, line in enumerate(s.split("\n")):
+        lines = s.split("\n")
+
+        for i, line in enumerate(lines):
             if line == "":
-                line = "<br>"
+                if i != len(lines) - 1: # ignore trailing empty line (added by split("\n"))
+                    result += "<br>"
+                continue
 
             if i == 0:
                 result += line
