@@ -26,12 +26,14 @@ class DeckManager(KeyHandler):
     def init_keybinds(self) -> None:
         self.keybind_map = \
         {
-            'q' : lambda s: True, # quit
-            'j': DeckManager.move_down,
-            'k': DeckManager.move_up,
-            'l': DeckManager.study,
-            'L': DeckManager.study_all,
+            'q': lambda: True, # quit
+            'j': self.move_down,
+            'k': self.move_up,
+            'l': self.study,
+            'L': self.study_all,
         }
+
+        self.keys_handled_by_parent = [':']
 
     def __init__(self, mm, col: Collection):
         self.mm = mm

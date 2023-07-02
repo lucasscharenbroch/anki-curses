@@ -40,25 +40,27 @@ class Reviewer(KeyHandler):
     def init_keybinds(self) -> None:
         self.keybind_map = \
         {
-            'H' : lambda s: True,
-            'q' : lambda s: True,
-            ' ' : Reviewer.flip,
-            'a' : lambda s: s.answer_card(AGAIN),
-            '1' : lambda s: s.answer_card(AGAIN),
-            'h' : lambda s: s.answer_card(HARD),
-            '2' : lambda s: s.answer_card(HARD),
-            '3' : lambda s: s.answer_card(GOOD),
-            'g' : lambda s: s.answer_card(GOOD),
-            '4' : lambda s: s.answer_card(EASY),
-            'e' : lambda s: s.answer_card(EASY),
-            'j': Reviewer.scroll_down,
-            'k': Reviewer.scroll_up,
-            'v': Reviewer.edit_note,
+            'H': lambda: True,
+            'q': lambda: True,
+            ' ': self.flip,
+            'a': lambda: self.answer_card(AGAIN),
+            '1': lambda: self.answer_card(AGAIN),
+            'h': lambda: self.answer_card(HARD),
+            '2': lambda: self.answer_card(HARD),
+            '3': lambda: self.answer_card(GOOD),
+            'g': lambda: self.answer_card(GOOD),
+            '4': lambda: self.answer_card(EASY),
+            'e': lambda: self.answer_card(EASY),
+            'j': self.scroll_down,
+            'k': self.scroll_up,
+            'v': self.edit_note,
         }
+
+        self.keys_handled_by_parent = [':']
 
     def __init__(self, dm, deck_queue: list[int]):
         self.dm = dm
-        self.parent = None
+        self.parent = dm
         self.mm = dm.mm
         self.col = dm.col
 
@@ -130,10 +132,10 @@ class Reviewer(KeyHandler):
         self.pad.clear()
 
         align_style_print_block(self.pad, 0, 2, lines)
-        '''
+        """
         for i, line in enumerate(lines):
             align_style_print(self.pad, i, 2, line)
-        '''
+        """
 
         self.refresh_pad()
 

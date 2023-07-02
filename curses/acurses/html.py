@@ -22,21 +22,21 @@ class CardParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[str]) -> None:
         self.tag_stack.append(tag)
         self.attr_stack.append(attrs)
-        if ('class', 'cloze') in attrs and not ('class', 'close-inactive') in attrs:
+        if ("class", "cloze") in attrs and not ("class", "close-inactive") in attrs:
             self.parsed_text += f"<{REPLACEMENT_CLOZE_TAG}>"
-        elif tag == 'div':
+        elif tag == "div":
             self.parsed_text += "\n"
 
     def handle_endtag(self, tag: str) -> None:
         assert self.tag_stack and self.tag_stack[-1] == tag
         self.tag_stack.pop()
         attrs = self.attr_stack.pop()
-        if ('class', 'cloze') in attrs and not ('class', 'close-inactive') in attrs:
+        if ("class", "cloze") in attrs and not ("class", "close-inactive") in attrs:
             self.parsed_text += f"</{REPLACEMENT_CLOZE_TAG}>"
 
     def handle_data(self, data: str) -> None:
         if not "style" in self.tag_stack:
-            self.parsed_text += html.escape(data) # re-escape '<>&' so card data isn't interpreted
+            self.parsed_text += html.escape(data) # re-escape "<>&" so card data isn't interpreted
                                                   # as a style tag
 
     @staticmethod

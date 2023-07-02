@@ -3,30 +3,28 @@ from __future__ import annotations
 import curses
 import _curses
 import curses.textpad
-import os
-import json
 
 from anki.collection import Collection
+from acurses.conf import ConfigManager
 from acurses.keyhandler import KeyHandler
 from acurses.decks import DeckManager
 from acurses.io import fill_line
 from acurses.sync import sync_collection
 from acurses.style import init_style
 
-CONFIG_RELATIVE_PATH = "/.config/anki-curses/anki-curses.conf"
-
 class MainMenu(KeyHandler):
     scr: _curses.window
     head_str: str
     foot_str: str
     col: Collection
-    conf_data: dict[str, str] | None
+    conf: ConfigManager
     mw: _curses.window
 
     def init_keybinds(self) -> None:
-        self.keybind_map = \
+        self. keybind_map = \
         {
-            'q' : lambda s: True, # quit
+            'q': lambda: True, # quit
+            ':': self.exec_command,
         }
 
     def init_curses(self) -> None:
@@ -36,28 +34,9 @@ class MainMenu(KeyHandler):
         self.redraw_scr(self.head_str, self.foot_str)
         curses.curs_set(0) # make cursor invisible
 
-    def init_config_data(self) -> None:
-        self.conf_data = None
-
-        try:
-            home_dir = os.environ["HOME"]
-            path = home_dir + CONFIG_RELATIVE_PATH
-            with open(path) as file:
-                self.conf_data = json.load(file)
-        except FileNotFoundError:
-            self.dump_debug(f"Could not open {path}. "
-                            f"The config should be in $HOME{CONFIG_RELATIVE_PATH}.")
-        except json.JSONDecodeError as e:
-            self.dump_debug(f"Error decoding config file JSON: {e}")
-        except Exception as e:
-            self.dump_debug(f"Error loading config file: {e}")
-
-        if self.conf_data is None:
-            self.conf_data = {}
-
     def init_collection(self) -> None:
-        if self.conf_data and "collection" in self.conf_data:
-            col_path = self.conf_data["collection"]
+        if self.conf.collection_path is not None:
+            col_path = self.conf.collection_path
         else:
             col_path = self.prompt("Enter collection db path:")
 
@@ -73,13 +52,15 @@ class MainMenu(KeyHandler):
         self.foot_str = "Loading collection..."
         self.mw = curses.newwin(curses.LINES - 4, curses.COLS, 2, 0)
 
-        self.init_keybinds()
         self.init_curses()
-        self.init_config_data()
+        self.init_keybinds()
+
+        self.conf = ConfigManager(self)
+
         self.init_collection()
 
     def set_head(self, s: str) -> None:
-        "Clear the head-line and place the given string into it"
+        """Clear the head-line and place the given string into it"""
         fill_line(self.scr, 0, ' ')
         self.scr.addstr(0, 0, s)
         self.scr.refresh()
@@ -91,7 +72,8 @@ class MainMenu(KeyHandler):
 
     def dump_debug(self, text: str, pause: bool = True) -> None:
         """Dumps the given string directly into the screen;
-        If pause is True, waits for a key input from the user before proceeding"""
+        If pause is True, waits for a key input from the user before proceeding
+        """
 
         self.mw.clear()
         self.mw.addstr(f"{text}")
@@ -104,7 +86,8 @@ class MainMenu(KeyHandler):
 
     def ask_yn(self, prompt: str) -> bool:
         """Prints the given prompt to the bottom line of the screen, and gets a y/n
-        response from the user"""
+        response from the user
+        """
 
         user_input = ""
 
@@ -114,7 +97,7 @@ class MainMenu(KeyHandler):
         return user_input[0].lower() == 'y'
 
     def redraw_scr(self, head_str: str, foot_str: str) -> None:
-        "Clears the screen entirely and redraws the basic layout"
+        """Clears the screen entirely and redraws the basic layout"""
         self.scr.clear()
 
         self.set_head(head_str)
@@ -138,17 +121,21 @@ class MainMenu(KeyHandler):
         curses.curs_set(0) # restore invisible cursor
         return input_string
 
-    def consent_to_sync(self) -> bool:
-        if "sync" in self.conf_data:
-            if self.conf_data["sync"].lower() == "false": return False
-            if self.conf_data["sync"].lower() == "true": return True
+    def exec_command(self) -> None:
+        """Opens a vim-like command mode"""
+        cmd = self.prompt()
+        self.dump_debug(f"exec command {cmd}") # TODO
 
-        return self.ask_yn("Sync collection")
+    def consent_to_sync(self) -> bool:
+        if self.conf.sync is not None:
+            return self.conf.sync
+
+        return self.ask_yn("Sync collection?")
 
     def sync_if_consented(self) -> None:
         if self.consent_to_sync():
             try:
-                sync_collection(self.conf_data, self.col, self.set_foot, self.prompt)
+                sync_collection(self.conf, self.col, self.set_foot, self.prompt)
             except Exception as e:
                 self.dump_debug(f"Error while syncing: {e}")
 
