@@ -10,6 +10,7 @@ class ConfigManager:
         "password": str,
         "hkey": str,
         "sync": bool,
+        "hide_child_decks": bool,
     }
 
     def __init__(self, mm):

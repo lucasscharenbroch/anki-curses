@@ -26,7 +26,9 @@ def init_attr_tags():
     {
         "normal": 0,
         "so": curses.A_STANDOUT,
-        "ul": curses.A_UNDERLINE,
+        "u": curses.A_UNDERLINE,
+        "b": curses.A_BOLD,
+        "i": curses.A_ITALIC,
     }
 
     for name, pair_id in COLOR_PAIR_IDS.items():

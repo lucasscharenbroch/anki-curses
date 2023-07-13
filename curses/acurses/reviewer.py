@@ -1,8 +1,5 @@
 import _curses
 import curses
-import tempfile
-import os
-import subprocess
 
 from textwrap import wrap
 
@@ -12,6 +9,7 @@ from anki.cards import Card
 from acurses.io import align_style_print, align_style_print_block, fill_line, fill_line_attr
 from acurses.keyhandler import KeyHandler
 from acurses.html import CardParser, NoteParser
+from acurses.wrappers import DeckInfo
 
 PAD_HEIGHT = 1000
 
@@ -27,7 +25,7 @@ GOOD = 4
 class Reviewer(KeyHandler):
     col: Collection
     deck_queue: list[int]
-    q_idx: int
+    deck_list: list[DeckInfo]
     head_str: str
     foot_str: str
     pad: _curses.window
@@ -69,7 +67,7 @@ class Reviewer(KeyHandler):
         self.lines_displayed = 0
         self.PAD_DISP_HEIGHT = curses.LINES - 6
 
-        self.head_str = "Reviewer |  Hq=back  <space>=flip  jk=scroll  1a=again  2h=hard  3g=good  4e=easy  v=edit-note"
+        self.head_str = "Reviewer  |  Hq=back  <space>=flip  jk=scroll  1a=again  2h=hard  3g=good  4e=easy  v=edit-note"
         self.foot_str = ""
 
         self.deck_queue = deck_queue
@@ -90,21 +88,35 @@ class Reviewer(KeyHandler):
             self.pad_scroll -= 1
         self.refresh_pad()
 
+    def curr_deck_cards_remaining(self) -> tuple[int, int, int]:
+        """Returns the (new, learn, review) count sum across all decks in the queue"""
+        pass
+
     def display_header(self):
-        "Prints deck name and counts on the first line of the main window"
+        """Prints deck name and counts on the first line of the main window"""
         fill_line(self.mm.mw, 0, char = " ")
 
-        new, lrn, rev = self.col.sched.counts()
+        new, lrn, rev = self.deck_list[self.deck_queue[0]].counts
+
+        # totals
+        tnew = sum([self.deck_list[i].counts[0] for i in self.deck_queue])
+        tlrn = sum([self.deck_list[i].counts[1] for i in self.deck_queue])
+        trev = sum([self.deck_list[i].counts[2] for i in self.deck_queue])
 
         if self.card.type == CARD_TYPE_NEW:
-            count_str = f"<ul><blue>{new}</blue></ul> <red>{lrn}</red> <green>{rev}</green> "
+            count_str = f"<u><blue>{new}</blue></u> <red>{lrn}</red> <green>{rev}</green> "
         elif self.card.type == CARD_TYPE_LRN:
-            count_str = f"<blue>{new}</blue> <ul><red>{lrn}</red></ul> <green>{rev}</green> "
+            count_str = f"<blue>{new}</blue> <u><red>{lrn}</red></u> <green>{rev}</green> "
         else:
-            count_str = f"<blue>{new}</blue> <red>{lrn}</red> <ul><green>{rev}</green></ul> "
+            count_str = f"<blue>{new}</blue> <red>{lrn}</red> <u><green>{rev}</green></u> "
 
-        align_style_print(self.mm.mw, 0, 1, f" [deck {1 + self.q_idx} of {len(self.deck_queue)}]")
-        align_style_print(self.mm.mw, 0, 2, f"<ul>{self.deck_list[self.deck_queue[self.q_idx]][0]}</ul>")
+        remaining_str = f" [{len(self.deck_queue)} deck{'s' if len(self.deck_queue) > 1 else ''} " \
+                        f"remaining (<blue>{tnew}</blue> <red>{tlrn}</red> <green>{trev}</green>)]"
+
+        deck_name_str = self.col.decks.name(self.card.did)
+
+        align_style_print(self.mm.mw, 0, 1, remaining_str)
+        align_style_print(self.mm.mw, 0, 2, f"<u>{deck_name_str}</u>")
         align_style_print(self.mm.mw, 0, 3, count_str)
 
         fill_line(self.mm.mw, 1, char = "~")
@@ -132,10 +144,6 @@ class Reviewer(KeyHandler):
         self.pad.clear()
 
         align_style_print_block(self.pad, 0, 2, lines)
-        """
-        for i, line in enumerate(lines):
-            align_style_print(self.pad, i, 2, line)
-        """
 
         self.refresh_pad()
 
@@ -155,8 +163,8 @@ class Reviewer(KeyHandler):
         assert 1 <= ease <= 4
         self.col.sched.answerCard(self.card, ease)
 
-        idx = self.deck_queue[self.q_idx]
-        self.deck_list[idx] = (*self.deck_list[idx][0:2], self.col.sched.counts())
+        idx = self.deck_queue[0]
+        self.deck_list[idx].counts = self.col.sched.counts()
         self.next_card()
 
     def next_card(self) -> None:
@@ -169,33 +177,15 @@ class Reviewer(KeyHandler):
         self.display_question()
 
     def edit_note(self) -> None:
-        fields = self.card.note().items()
-
-        EDITOR = os.environ.get("EDITOR", "vim")
-
-        curses.endwin()
-
-        for k, v in fields:
-            with tempfile.NamedTemporaryFile(prefix = f"{k}__", suffix = ".tmp") as tf:
-                tf.write(str.encode(NoteParser.decode(v)))
-                tf.flush()
-
-                subprocess.call([EDITOR, tf.name])
-
-                tf.seek(0)
-                new_v = NoteParser.encode(tf.read().decode())
-
-            self.card.note()[k] = new_v
-
-        self.card.note().flush() # update cards that rely on this note
+        self.mm.edit_note(self.card.note())
         self.card.load()
         self.display_header()
         self.display_question()
 
     def study_decks_in_queue(self) -> None:
-        for q_idx, idx in enumerate(self.deck_queue):
-            self.q_idx = q_idx
-            self.col.decks.set_current(self.deck_list[idx][1])
+        while self.deck_queue:
+            idx = self.deck_queue[0]
+            self.col.decks.set_current(self.deck_list[idx].id)
             self.col.sched.reset()
             self.next_card()
 
@@ -203,8 +193,13 @@ class Reviewer(KeyHandler):
                 if self.handle_key(self.mm.scr.getch()):
                     return
 
+            self.deck_queue.pop(0)
+
+    def redraw(self) -> None:
+        self.mm.redraw_scr(self.head_str, self.foot_str)
+        self.display_header()
+        self.display_answer() if self.answer_displayed else self.display_question()
+
     def mainloop(self) -> None:
         self.mm.redraw_scr(self.head_str, self.foot_str)
-
         self.study_decks_in_queue()
-        self.col.save()

@@ -5,13 +5,15 @@ from html.parser import HTMLParser
 from acurses.style import *
 
 class CardParser(HTMLParser):
-    """Strips any non-cloze html from the given card (i.e. style tags),
+    """Strips any non-cloze html from the given card (i.e. <style> tags),
     re-wrapping inactive cloze-span tags with REPLACEMENT_CLOZE_TAG"""
 
     tag_stack: list[str]
     attr_stack: list[str]
     parsed_text: str
     seen_div: bool
+
+    TAGS_TO_KEEP = ['b', 'i', 'u'] # keep basic formatting tags (will be printed in terminal)
 
     def __init__(self):
         super().__init__()
@@ -26,13 +28,17 @@ class CardParser(HTMLParser):
             self.parsed_text += f"<{REPLACEMENT_CLOZE_TAG}>"
         elif tag == "div":
             self.parsed_text += "\n"
+        elif tag in self.TAGS_TO_KEEP:
+            self.parsed_text += f"<{tag}>"
 
     def handle_endtag(self, tag: str) -> None:
-        assert self.tag_stack and self.tag_stack[-1] == tag
-        self.tag_stack.pop()
+        assert self.tag_stack and tag in self.tag_stack
+        self.tag_stack.remove(tag)
         attrs = self.attr_stack.pop()
         if ("class", "cloze") in attrs and not ("class", "close-inactive") in attrs:
             self.parsed_text += f"</{REPLACEMENT_CLOZE_TAG}>"
+        elif tag in self.TAGS_TO_KEEP:
+            self.parsed_text += f"</{tag}>"
 
     def handle_data(self, data: str) -> None:
         if not "style" in self.tag_stack:
@@ -87,9 +93,13 @@ class AttrParser(HTMLParser):
         return (parser.parsed_text, parser.attr_list)
 
 class NoteParser(HTMLParser):
-    """Converts html escape characters (by default) and divs to lines"""
+    """Converts html escape characters (by default) and divs to lines,
+    preserving TAGS_TO_KEEP
+    """
 
     parsed_text: str
+
+    TAGS_TO_KEEP = ['b', 'i', 'u'] # keep basic formatting tags (will be printed in terminal)
 
     def __init__(self):
         super().__init__()
@@ -100,10 +110,14 @@ class NoteParser(HTMLParser):
         if tag == "div" and not self.seen_div:
             self.seen_div = True
             self.parsed_text += "\n"
+        elif tag in self.TAGS_TO_KEEP:
+            self.parsed_text += f"<{tag}>"
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "div":
             self.parsed_text += "\n"
+        elif tag in self.TAGS_TO_KEEP:
+            self.parsed_text += f"</{tag}>"
 
     def handle_data(self, data: str) -> None:
         self.parsed_text += data
@@ -118,6 +132,10 @@ class NoteParser(HTMLParser):
     @staticmethod
     def encode(s: str) -> str:
         s = html.escape(s)
+
+        for tag in NoteParser.TAGS_TO_KEEP: # un-escape TAGS_TO_KEEP
+            s = s.replace(f"&lt;{tag}&gt;", f"<{tag}>")
+            s = s.replace(f"&lt;/{tag}&gt;", f"</{tag}>")
 
         result = ""
 

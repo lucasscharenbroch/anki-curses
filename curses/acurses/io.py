@@ -6,7 +6,7 @@ import _curses
 from acurses.html import AttrParser
 
 def fill_line(win: _curses.window, line: int, char: chr = None) -> None:
-    "Overwrites the given line with repeated instances of the given character"
+    """Overwrites the given line with repeated instances of the given character"""
 
     if char is None: # workaround to default param; curses.ACS_HLINE is not available immediately
         char = curses.ACS_HLINE
@@ -17,7 +17,7 @@ def fill_line(win: _curses.window, line: int, char: chr = None) -> None:
     win.hline(line, 0, char, curses.COLS)
 
 def fill_line_attr(win: _curses.window, line: int, attr: int = 0) -> None:
-    "Fills the given line with the given attribute"
+    """Fills the given line with the given attribute"""
     win.chgat(line, 0, win.getmaxyx()[1], attr)
 
 def print_text_and_attrs(
@@ -31,7 +31,10 @@ def print_text_and_attrs(
         if col + i >= win.getmaxyx()[1]: # out of bounds
             return
 
-        win.insstr(line, col + i, raw_text[i], attrs[i])
+        if col + i + 1 == win.getmaxyx()[1]: # last col
+            win.insstr(line, col + i, raw_text[i], attrs[i])
+        else:
+            win.addstr(line, col + i, raw_text[i], attrs[i])
 
 def print_styled_mu(win: _curses.window, line: int, col:int, text: str) -> None:
     raw_text, attrs = AttrParser.parse(text)
