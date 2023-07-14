@@ -43,6 +43,9 @@ class InputLine():
                 break
             elif kc == curses.KEY_BACKSPACE or kc == 127: # backspace / delete
                 self.txt = self.txt[:-1]
+            elif kc == 27: # escape
+                result = ""
+                break
             elif kc in range(255) and chr(kc) in VALID_CHARS:
                 self.txt += chr(kc)
 
