@@ -24,6 +24,7 @@ from acurses.select_from_list import SelectFromList
 from acurses.wrappers import DeckInfo
 from acurses.html import NoteParser
 from acurses.browser import NoteBrowser
+from acurses.input_line import InputLine
 
 DeckNameId = decks_pb2.DeckNameId
 SearchNode = search_pb2.SearchNode
@@ -143,23 +144,17 @@ class MainMenu(KeyHandler):
 
         self.scr.refresh()
 
-    def prompt(self, prompt: str = ":") -> str:
+    def prompt(self, prompt: str, init_txt: str = "", quit_on_empty: bool = False) -> str:
         curses.curs_set(2) # set cursor to "very visible"
 
-        align_style_print(self.scr, curses.LINES - 1, 1, prompt) # draw prompt
-        self.scr.refresh()
+        out = InputLine(self, prompt, init_txt, quit_on_empty).out()
 
-        foot_window = curses.newwin(1, curses.COLS - len(prompt), curses.LINES - 1, len(prompt))
-        foot_window.clear()
-        textbox = curses.textpad.Textbox(foot_window)
-
-        input_string = textbox.edit()[:-1]
         curses.curs_set(0) # restore invisible cursor
-        return input_string
+        return out
 
     def exec_command(self, active_keyhandler: KeyHandler) -> None:
         """Opens a vim-like command mode"""
-        cmd = self.prompt()
+        cmd = self.prompt("", ":", True)[1:]
 
         if cmd in self.command_map:
             result = self.command_map[cmd]()
