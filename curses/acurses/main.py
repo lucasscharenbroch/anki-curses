@@ -200,7 +200,8 @@ class MainMenu(KeyHandler):
         def notetype_to_strs(notetype: NotetypeNameId) -> tuple[str, str, str]:
             return (notetype.name, "", "")
 
-        selector = SelectFromList(self, self, "Select a note type", notetypes, notetype_to_strs)
+        selector = SelectFromList(self, self, "Select a note type", notetypes, notetype_to_strs,
+                                  lambda nid, s: s in nid.name)
         selector.mainloop()
         return selector.get_selection()
 
@@ -220,7 +221,8 @@ class MainMenu(KeyHandler):
         def deck_nameid_to_strs(deck: DeckNameId) -> tuple[str, str, str]:
             return (deck.name, "", "")
 
-        selector = SelectFromList(self, self, "Select a deck", deck_list, deck_nameid_to_strs)
+        selector = SelectFromList(self, self, "Select a deck", deck_list, deck_nameid_to_strs,
+                                  lambda dnid, s: s in dnid.name)
         selector.mainloop()
         return selector.get_selection()
 

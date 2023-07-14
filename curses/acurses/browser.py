@@ -27,7 +27,7 @@ class NoteBrowser(SelectFromList):
         self.note_list = [NoteInfo(self.col, self.col.get_note(id)) for id in note_ids]
 
         super().__init__(mm, mm, f"Select a Note to edit ({len(self.note_list)} matches)",
-                         self.note_list, self.note_info_to_strs)
+                         self.note_list, self.note_info_to_strs, lambda n, s: any([s in f for f in n.fields]))
 
     def note_info_to_strs(self, note: NoteInfo) -> tuple[str, str, str]:
         return (note.field_str, "", note.deck_str)

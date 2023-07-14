@@ -5,11 +5,13 @@ from typing import Callable, TypeVar
 
 from acurses.keyhandler import KeyHandler
 from acurses.io import align_style_print, fill_line_attr
+from acurses.input_line import InputLine
 
 T = TypeVar("T")
 
 class SelectFromList(KeyHandler):
     choices: list[T]
+    is_match: list[bool]
     head_str: str
     foot_str: str
     pad: _curses.window
@@ -25,6 +27,9 @@ class SelectFromList(KeyHandler):
             'q': self.no_selection,
             'j': self.move_down,
             'k': self.move_up,
+            '/': self.search,
+            'n': self.next_match,
+            'N': self.prev_match,
             'f': lambda: self.screen_down(curses.LINES - 4),
             'b': lambda: self.screen_up(curses.LINES - 4),
             'd': lambda: self.screen_down((curses.LINES - 4) // 2),
@@ -42,6 +47,7 @@ class SelectFromList(KeyHandler):
         prompt: str,
         choices: list[T],
         elem_to_strs: Callable[[T], tuple[str, str, str]],
+        elem_is_match: Callable[[T, str], bool] = lambda e, s: False,
         keybind_help = "hq=back  jk=navigate  l=select"):
 
         self.mm = mm
@@ -51,7 +57,9 @@ class SelectFromList(KeyHandler):
         self.foot_str = ""
 
         self.choices = choices
+        self.is_match = [False for c in choices]
         self.elem_to_strs = elem_to_strs
+        self.elem_is_match = elem_is_match
 
         self.pad = curses.newpad(len(self.choices), curses.COLS)
         self.pad_scroll = 0
@@ -92,7 +100,7 @@ class SelectFromList(KeyHandler):
             self.pad_scroll += 1
 
     def move_up(self) -> None:
-        """Decrement self.cursor_pos if possible, decrementing pad_scroll if 
+        """Decrement self.cursor_pos if possible, decrementing pad_scroll if
         necessary"""
         if self.cursor_pos != 0:
             self.cursor_pos -= 1
@@ -150,3 +158,46 @@ class SelectFromList(KeyHandler):
         assert(len(choices) == len(self.choices)) # can't change height of pad
 
         self.choices = choices
+
+    def search(self) -> None:
+        def update(query: str) -> None:
+            query = query[1:] # ignore '/'
+            for i, elem in enumerate(self.choices):
+                self.is_match[i] = self.elem_is_match(elem, query)
+
+            # go to next match
+            self.next_match(0)
+            self.pad.clear()
+            self.draw_pad()
+            self.refresh_pad()
+
+        update(InputLine(self.mm, "", "/", True, update).out())
+
+    def next_match(self, offset: int = 1) -> None:
+        for i in range(offset, offset + len(self.choices)):
+            if self.is_match[(self.cursor_pos + i) % len(self.choices)]:
+                target = (self.cursor_pos + i) % len(self.choices)
+                diff = target - self.cursor_pos
+
+                if diff < 0:
+                    self.screen_up(-diff)
+                else:
+                    self.screen_down(diff)
+
+                return
+
+        self.mm.set_foot("<red>No match found</red>")
+
+    def prev_match(self, offset: int = 1) -> None:
+        for i in range(offset, len(self.choices) + offset):
+            if self.is_match[(self.cursor_pos - i) % len(self.choices)]:
+                target = (self.cursor_pos - i) % len(self.choices)
+                diff = target - self.cursor_pos
+
+                if diff < 0:
+                    self.screen_up(-diff)
+                else:
+                    self.screen_down(diff)
+                return
+
+        self.mm.set_foot("<red>No match found</red>")

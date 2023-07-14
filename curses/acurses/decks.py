@@ -34,7 +34,7 @@ class DeckManager(SelectFromList):
         self.init_deck_list()
 
         super().__init__(mm, mm, "Deck Manager", self.deck_list, self.deck_info_to_strs,
-                                 "q=quit  jk=navigate  l=study  L=study-all  r=refresh")
+                         lambda d, s: s in d.name, "q=quit  jk=navigate  l=study  L=study-all  r=refresh")
 
     def init_deck_list(self):
         self.deck_list = [DeckInfo(nameid.name, nameid.id, self.get_deck_counts(nameid))

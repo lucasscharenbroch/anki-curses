@@ -19,13 +19,16 @@ class DeckInfo:
 
 class NoteInfo:
     note_obj: Note
+    fields: list[str]
     field_str: str
     deck_str: str
 
     def __init__(self, col: Collection, note_obj: Note):
         self.note_obj = note_obj
 
-        field_str = " / ".join([NoteParser.decode(f) for f in self.note_obj.values()])
+        self.fields = list(self.note_obj.values())
+
+        field_str = " / ".join([NoteParser.decode(f) for f in self.fields])
         field_str = field_str.replace('\n', ' ')
 
         max_field_str_sz = 2 * (curses.COLS - 6) // 3
