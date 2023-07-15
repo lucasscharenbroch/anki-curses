@@ -7,4 +7,10 @@ export PYTHONPYCACHEPREFIX=out/pycache
 export ANKIDEV=1
 
 ./ninja pylib/anki qt/aqt
-./out/pyenv/bin/python tools/run.py $*
+
+if [ "$1" = "--qt" ]; then
+    shift
+    ./out/pyenv/bin/python tools/run.py $*
+else
+    ./out/pyenv/bin/python tools/run_curses.py $*
+fi

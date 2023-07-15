@@ -24,7 +24,7 @@ class ConfigManager:
                 conf_data = toml.load(file)
         except FileNotFoundError:
             self.mm.dump_debug(f"Could not open {path}. "
-                          f"The config should be in $HOME{CONFIG_RELATIVE_PATH}.")
+                          f"The config should be in $HOME{self.CONFIG_RELATIVE_PATH}.")
         except toml.TomlDecodeError as e:
             self.mm.dump_debug(f"Error decoding config file TOML: {e}")
         except Exception as e:
