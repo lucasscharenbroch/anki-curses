@@ -11,6 +11,7 @@ The curses interface is not currently capable of being a complete replacement fo
 - Support for Basic Cards and Cloze Cards (Cloze deletion)
 - Note Editing
 - Note Lookup
+- Adding Notes
 - Sync
 - Configuration File
 
