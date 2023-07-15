@@ -27,6 +27,8 @@ def print_text_and_attrs(
     raw_text: str,
     attrs: list[int]
     ) -> None:
+    """Prints the (char-str, attr-list) pair at the given (line, col); chars
+    past the end of the window are ignored """
     for i in range(len(raw_text)):
         if col + i >= win.getmaxyx()[1]: # out of bounds
             return
@@ -37,6 +39,9 @@ def print_text_and_attrs(
             win.addstr(line, col + i, raw_text[i], attrs[i])
 
 def print_styled_mu(win: _curses.window, line: int, col:int, text: str) -> None:
+    """Prints the given markup text att the given (line, col); chars
+    past the end of the window are ignored
+    """
     raw_text, attrs = AttrParser.parse(text)
     print_text_and_attrs(win, line, col, raw_text, attrs)
 
@@ -46,7 +51,9 @@ def align_style_print_block(
     align: Literal[1, 2, 3],
     lines: list[str]
     ) -> None:
-
+    """Print a list of markup-text lines, justified (1: left, 2:celter, 3:right),
+    discarding any text falling off the side of the window
+    """
     width = win.getmaxyx()[1]
 
     parser = AttrParser()
@@ -64,4 +71,5 @@ def align_style_print_block(
             print_text_and_attrs(win, start_line + i, (width - len(raw_text)) // 2, raw_text, attrs)
 
 def align_style_print(win: _curses.window, line: int, align: Literal[1, 2, 3], text: str) -> None:
+    """Single-line version of align_style_print_block"""
     align_style_print_block(win, line, align, [text])

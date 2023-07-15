@@ -6,7 +6,8 @@ from acurses.style import *
 
 class CardParser(HTMLParser):
     """Strips any non-cloze html from the given card (i.e. <style> tags),
-    re-wrapping inactive cloze-span tags with REPLACEMENT_CLOZE_TAG"""
+    re-wrapping inactive cloze-span tags with REPLACEMENT_CLOZE_TAG
+    """
 
     tag_stack: list[str]
     attr_stack: list[str]
@@ -54,7 +55,8 @@ class CardParser(HTMLParser):
 
 class AttrParser(HTMLParser):
     """Converts style-marked text (with tags exclusively from ATTR_TAGS) into
-    a (un-marked text, attribute-list) pair for printing to the screen"""
+    a (un-marked text, attribute-list) pair for printing to the screen
+    """
 
     parsed_text: str
     tag_stack: list[str]
@@ -124,6 +126,9 @@ class NoteParser(HTMLParser):
 
     @staticmethod
     def decode(s: str) -> str:
+        """Converts db note text (html with divs and brs) into plain text
+        (maintaining TAGS_TO_KEEP)
+        """
         s = s.replace("<br>", "\n")
         parser = NoteParser()
         parser.feed(s)
@@ -131,6 +136,9 @@ class NoteParser(HTMLParser):
 
     @staticmethod
     def encode(s: str) -> str:
+        """Converts plain-text into db note text (escaping <>& and newlines into
+        div/ br), maintaining TAGS_TO_KEEP
+        """
         s = html.escape(s)
 
         for tag in NoteParser.TAGS_TO_KEEP: # un-escape TAGS_TO_KEEP
