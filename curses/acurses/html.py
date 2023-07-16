@@ -78,6 +78,9 @@ class AttrParser(HTMLParser):
         self.current_attr |= ATTR_TAGS[tag]
 
     def handle_endtag(self, tag: str) -> None:
+        if tag not in ATTR_TAGS and tag not in self.tag_stack: # TODO remove
+            return #raise Exception(tag)
+
         assert tag in ATTR_TAGS
         assert tag in self.tag_stack
 
@@ -113,13 +116,13 @@ class NoteParser(HTMLParser):
             self.seen_div = True
             self.parsed_text += "\n"
         elif tag in self.TAGS_TO_KEEP:
-            self.parsed_text += f"<{tag}>"
+            self.parsed_text += f"\<{tag}\>"
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "div":
             self.parsed_text += "\n"
         elif tag in self.TAGS_TO_KEEP:
-            self.parsed_text += f"</{tag}>"
+            self.parsed_text += f"\</{tag}\>"
 
     def handle_data(self, data: str) -> None:
         self.parsed_text += data
@@ -127,27 +130,41 @@ class NoteParser(HTMLParser):
     @staticmethod
     def decode(s: str) -> str:
         """Converts db note text (html with divs and brs) into plain text
-        (maintaining TAGS_TO_KEEP)
+        (maintaining TAGS_TO_KEEP, escaped with backslashes)
         """
         s = s.replace("<br>", "\n")
+        s = s.replace("\\", "\\\\")
         parser = NoteParser()
         parser.feed(s)
         return parser.parsed_text
 
     @staticmethod
     def encode(s: str) -> str:
-        """Converts plain-text into db note text (escaping <>& and newlines into
-        div/ br), maintaining TAGS_TO_KEEP
+        """Converts plain-text into db note text (escaping <>&, and newlines into
+        div/ br), parsing backslash-escapes (\<, \>, \\).
         """
-        s = html.escape(s)
 
-        for tag in NoteParser.TAGS_TO_KEEP: # un-escape TAGS_TO_KEEP
-            s = s.replace(f"&lt;{tag}&gt;", f"<{tag}>")
-            s = s.replace(f"&lt;/{tag}&gt;", f"</{tag}>")
+        escaped_chars = ['<', '>', '\\']
+        html_escapes = {'<': "&lt;", '>': "&gt;", '&': "&amp;"}
+
+        # parse backslash escapes and html escapes
+        sp = "" # s' (after escapes)
+        i = 0
+        while i < len(s):
+            if s[i] == '\\':
+                if i == len(s) - 1 or s[i + 1] not in escaped_chars:
+                    pass # invalid backslash escape: ignore
+                else:
+                    sp += s[i + 1]
+
+                i += 2
+            else:
+                sp += html_escapes[s[i]] if s[i] in html_escapes else s[i]
+
+                i += 1
 
         result = ""
-
-        lines = s.split("\n")
+        lines = sp.split("\n")
 
         for i, line in enumerate(lines):
             if line == "":
