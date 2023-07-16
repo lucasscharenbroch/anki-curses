@@ -78,9 +78,6 @@ class AttrParser(HTMLParser):
         self.current_attr |= ATTR_TAGS[tag]
 
     def handle_endtag(self, tag: str) -> None:
-        if tag not in ATTR_TAGS and tag not in self.tag_stack: # TODO remove
-            return #raise Exception(tag)
-
         assert tag in ATTR_TAGS
         assert tag in self.tag_stack
 
@@ -98,13 +95,14 @@ class AttrParser(HTMLParser):
         return (parser.parsed_text, parser.attr_list)
 
 class NoteParser(HTMLParser):
-    """Converts html escape characters (by default) and divs to lines,
-    preserving TAGS_TO_KEEP
+    """Converts backend-note text into editable text, decoding html escape
+    characters (by default) and divs to lines, and escaping ESCAPED_TAGS
     """
 
     parsed_text: str
 
-    TAGS_TO_KEEP = ['b', 'i', 'u'] # keep basic formatting tags (will be printed in terminal)
+    ESCAPED_TAGS = ['b', 'i', 'u', '\\'] # tags to be backslash-escaped in plain-text
+                                         # (\x for start, and \X for end)
 
     def __init__(self):
         super().__init__()
@@ -115,23 +113,21 @@ class NoteParser(HTMLParser):
         if tag == "div" and not self.seen_div:
             self.seen_div = True
             self.parsed_text += "\n"
-        elif tag in self.TAGS_TO_KEEP:
-            self.parsed_text += f"\<{tag}\>"
+        elif tag in self.ESCAPED_TAGS:
+            self.parsed_text += f"\{tag.lower()}"
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "div":
             self.parsed_text += "\n"
-        elif tag in self.TAGS_TO_KEEP:
-            self.parsed_text += f"\</{tag}\>"
+        elif tag in self.ESCAPED_TAGS:
+            self.parsed_text += f"\{tag.upper()}"
 
     def handle_data(self, data: str) -> None:
         self.parsed_text += data
 
     @staticmethod
     def decode(s: str) -> str:
-        """Converts db note text (html with divs and brs) into plain text
-        (maintaining TAGS_TO_KEEP, escaped with backslashes)
-        """
+        """Converts db note text (html) into plain text"""
         s = s.replace("<br>", "\n")
         s = s.replace("\\", "\\\\")
         parser = NoteParser()
@@ -141,30 +137,34 @@ class NoteParser(HTMLParser):
     @staticmethod
     def encode(s: str) -> str:
         """Converts plain-text into db note text (escaping <>&, and newlines into
-        div/ br), parsing backslash-escapes (\<, \>, \\).
+        div/ br), parsing backslash-escapes.
         """
 
-        escaped_chars = ['<', '>', '\\']
-        html_escapes = {'<': "&lt;", '>': "&gt;", '&': "&amp;"}
+        s = html.escape(s) # escape <>&
 
-        # parse backslash escapes and html escapes
-        sp = "" # s' (after escapes)
+        # un-escape backslash escape (\i, \b, \u, \\)
+        sp = "" # s prime (after escapes)
         i = 0
         while i < len(s):
             if s[i] == '\\':
-                if i == len(s) - 1 or s[i + 1] not in escaped_chars:
-                    pass # invalid backslash escape: ignore
+                if i == len(s) - 1 or s[i + 1].lower() not in NoteParser.ESCAPED_TAGS:
+                    raise Exception(f"Error while parsing card: `{s}`: invalid backslash escape")
                 else:
-                    sp += s[i + 1]
-
+                    if s[i + 1] == '\\':
+                        sp += '\\'
+                    elif s[i + 1].islower():
+                        sp += f"<{s[i + 1]}>"
+                    else:
+                        sp += f"</{s[i + 1]}>"
                 i += 2
             else:
-                sp += html_escapes[s[i]] if s[i] in html_escapes else s[i]
-
+                sp += s[i]
                 i += 1
+        s = sp
+
 
         result = ""
-        lines = sp.split("\n")
+        lines = s.split("\n")
 
         for i, line in enumerate(lines):
             if line == "":
