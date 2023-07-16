@@ -270,6 +270,7 @@ class MainMenu(KeyHandler):
 
     def find_notes_in(self, regex: bool = False) -> str:
         deck = self.select_deck()
+        if deck is None: return
         query = self.prompt("search for literal text:")
         search_str = self.col.build_search_string(SearchNode(literal_text=query), SearchNode(deck=deck.name))
         matches = self.col.find_notes(search_str)
