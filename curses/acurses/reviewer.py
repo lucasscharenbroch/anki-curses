@@ -19,8 +19,8 @@ CARD_TYPE_REV = 2
 
 AGAIN = 1
 HARD = 2
-EASY = 3
-GOOD = 4
+GOOD = 3
+EASY = 4
 
 class Reviewer(KeyHandler):
     col: Collection
